@@ -1,6 +1,3 @@
-
-# ML_Assignment2
-=======
 # ML Assignment 2
 
 ## Problem Statement
