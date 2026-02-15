@@ -1,16 +1,16 @@
 # ML Assignment 2
 
-#Problem Statement
+## Problem Statement
 Objective: Build and compare multiple machine learning classification models to predict whether a customer will subscribe to a term deposit using demographic, financial, and campaign data.
 Problem Type: Supervised binary classification (target: yes/no subscription), evaluated using performance metrics to determine the best-performing model.
 
 
-#Dataset Description
+## Dataset Description
 Dataset: Bank Marketing Dataset Records: 45,211 Features: 16 inputs + 1 target
 The dataset contains customer demographic (age, job, marital, education), financial (balance, loan, housing, default), and campaign interaction details (contact type, duration, campaign count, previous outcomes, etc.).
 Target Variable: Target — whether the client subscribed to a term deposit (yes/no).
 
-# Models Used
+## Models Used
 Logistic Regression: Linear classifier that outputs probabilities; effective for simple, linearly separable data.
 Decision Tree: Rule-based model that is easy to interpret but can overfit.
 KNN: Predicts based on nearest neighbors; sensitive to scaling and distance metrics.
