@@ -1,105 +1,153 @@
 import streamlit as st
 import pandas as pd
-import joblib
-import os
+import numpy as np
 
-st.set_page_config(page_title="2025AA05590", layout="centered")
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-st.title("ML Assignment 2 (2025AA05590) — Classification Models")
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    roc_auc_score,
+    RocCurveDisplay
+)
 
-# ---------------- MODEL LIST ----------------
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestClassifier
+
+import matplotlib.pyplot as plt
+
+st.set_page_config(page_title="2025AA05590_MLAssignment2", layout="wide")
+
+st.title("ML Assignment 2 (2025AA05590)")
+
+model_name = st.selectbox(
+    "Select Model",
+    ["KNN","Decision Tree","Logistic Regression","Naive Bayes","Random Forest"]
+)
+
+file = st.file_uploader("Please upload a CSV File", type=["csv"])
+
+if file is None:
+    st.info("Upload dataset to begin")
+    st.stop()
+
+try:
+    df = pd.read_csv(file, sep=None, engine="python")
+except:
+    st.error("Could not read CSV file.")
+    st.stop()
+
+st.subheader("Uploaded Data Preview")
+st.dataframe(df.head())
+
+target_col = None
+
+for col in df.columns:
+    if col.lower() in ["target","y","label","class"]:
+        target_col = col
+        break
+
+if target_col is None:
+    st.error("No target column found. Expected column name like: Target / y / label")
+    st.stop()
+
+st.success(f"Detected Target Column → {target_col}")
+
+y = df[target_col]
+X = df.drop(columns=[target_col])
+
+if y.dtype == object:
+    y = y.str.lower().map({"yes":1,"no":0,"true":1,"false":0})
+
+if y.isnull().any():
+    st.error("Target column must contain only binary values.")
+    st.stop()
+
+X_train,X_test,y_train,y_test = train_test_split(
+    X,y,test_size=0.2,random_state=42,stratify=y
+)
+
+cat_cols = X.select_dtypes(include="object").columns.tolist()
+num_cols = X.select_dtypes(exclude="object").columns.tolist()
+
+preprocessor = ColumnTransformer([
+    ("num", StandardScaler(), num_cols),
+    ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols)
+])
+
 models = {
-    "Logistic Regression": "model/logistic_regression.pkl",
-    "Decision Tree": "model/decision_tree.pkl",
-    "KNN": "model/knn.pkl",
-    "Naive Bayes": "model/naive_bayes.pkl",
-    "Random Forest": "model/random_forest.pkl",
-    "XGBoost": "model/xgboost.pkl"
+    "KNN": KNeighborsClassifier(),
+    "Decision Tree": DecisionTreeClassifier(),
+    "Logistic Regression": LogisticRegression(max_iter=1000),
+    "Naive Bayes": GaussianNB(),
+    "Random Forest": RandomForestClassifier()
 }
 
-model_name = st.selectbox("Select Model", list(models.keys()))
+if st.button("Train Model"):
 
-uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
+    model = models[model_name]
 
-# ---------------- LOAD MODEL ----------------
-@st.cache_resource
-def load_model(path):
-    return joblib.load(path)
+    pipe = Pipeline([
+        ("prep", preprocessor),
+        ("model", model)
+    ])
 
-# ---------------- MAIN ----------------
-if uploaded_file is not None:
+    pipe.fit(X_train,y_train)
+    preds = pipe.predict(X_test)
+
+   
+    acc = accuracy_score(y_test,preds)
+    prec = precision_score(y_test,preds)
+    rec = recall_score(y_test,preds)
+    f1 = f1_score(y_test,preds)
 
     try:
-        df = pd.read_csv(uploaded_file, sep=None, engine="python")
+        probs = pipe.predict_proba(X_test)[:,1]
+        auc = roc_auc_score(y_test,probs)
+    except:
+        auc = np.nan
+        probs = None
 
-        st.subheader("Uploaded Data Preview")
-        st.dataframe(df.head())
+    # DISPLAY METRICS
+    st.subheader("Model Performance")
 
-        # Detect target column automatically
-        target_col = None
+    col1,col2,col3,col4,col5 = st.columns(5)
 
-        for col in df.columns[::-1]:
-            if df[col].dtype == "object" or df[col].nunique() <= 2:
-                target_col = col
-                break
+    col1.metric("Accuracy", f"{acc:.3f}")
+    col2.metric("Precision", f"{prec:.3f}")
+    col3.metric("Recall", f"{rec:.3f}")
+    col4.metric("F1 Score", f"{f1:.3f}")
+    col5.metric("AUC", "N/A" if np.isnan(auc) else f"{auc:.3f}")
 
-        if target_col is None:
-            st.error("❌ Could not detect target column")
-            st.stop()
+    # CONFUSION MATRIX
+    st.subheader("Confusion Matrix")
 
-        st.info(f"Detected Target Column → **{target_col}**")
+    cm = confusion_matrix(y_test,preds)
+    fig, ax = plt.subplots()
+    ax.imshow(cm)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
 
-        X = df.drop(target_col, axis=1)
-        y = df[target_col]
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j,i,cm[i,j],ha="center",va="center")
 
-        # convert yes/no → 1/0 if needed
-        if y.dtype == "object":
-            y = y.astype(str).str.lower().map({"yes":1,"no":0})
+    st.pyplot(fig)
 
-        # Load model
-        model_path = models[model_name]
+    # ROC CURVE
+    if probs is not None:
+        st.subheader("ROC Curve")
+        fig2, ax2 = plt.subplots()
+        RocCurveDisplay.from_predictions(y_test, probs, ax=ax2)
+        st.pyplot(fig2)
 
-        if not os.path.exists(model_path):
-            st.error("Model file not found. Train model first.")
-            st.stop()
-
-        model = load_model(model_path)
-
-        # Predict
-        y_pred = model.predict(X)
-
-        #st.subheader("Predictions")
-        #st.write(y_pred[:20])
-
-        # Metrics if target exists
-        if y.isnull().sum() == 0:
-
-            from sklearn.metrics import (
-                accuracy_score,
-                precision_score,
-                recall_score,
-                f1_score,
-                matthews_corrcoef,
-                confusion_matrix
-            )
-
-            st.subheader("Evaluation Metrics")
-
-            st.write("Accuracy:", accuracy_score(y, y_pred))
-            st.write("Precision:", precision_score(y, y_pred))
-            st.write("Recall:", recall_score(y, y_pred))
-            st.write("F1 Score:", f1_score(y, y_pred))
-            st.write("MCC:", matthews_corrcoef(y, y_pred))
-
-            st.subheader("Confusion Matrix")
-            st.write(confusion_matrix(y, y_pred))
-
-        else:
-            st.warning("Target column contains null values. Metrics skipped.")
-
-    except Exception as e:
-        st.error("App Error — Please check dataset format.")
-        st.exception(e)
-
-else:
-    st.info("Upload a dataset to start predictions.")
+    st.success("Training Successfully Complete")
