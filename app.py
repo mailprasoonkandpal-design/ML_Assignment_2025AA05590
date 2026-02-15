@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="2025AA05590_MLAssignment2", layout="wide")
 
-st.title("ML Assignment 2 (2025AA05590)")
+st.title("MLAssignment2_2025AA05590_PrasoonKandpal")
 
 model_name = st.selectbox(
     "Select Model",
@@ -118,7 +118,7 @@ if st.button("Train Model"):
         probs = None
 
     # DISPLAY METRICS
-    st.subheader("Model Performance")
+    st.subheader("Evaluation Matrix")
 
     col1,col2,col3,col4,col5 = st.columns(5)
 
@@ -143,11 +143,5 @@ if st.button("Train Model"):
 
     st.pyplot(fig)
 
-    # ROC CURVE
-    if probs is not None:
-        st.subheader("ROC Curve")
-        fig2, ax2 = plt.subplots()
-        RocCurveDisplay.from_predictions(y_test, probs, ax=ax2)
-        st.pyplot(fig2)
-
+    
     st.success("Training Successfully Complete")
