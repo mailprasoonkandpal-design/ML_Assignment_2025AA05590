@@ -22,7 +22,7 @@ Random Forest: Ensemble of trees that improves accuracy and reduces overfitting.
 XGBoost: Advanced boosting algorithm with strong performance and generalization.
 
 ## Model Comparison Table
-Model Name	Accuracy	AUC	Precision	Recall	F1 Score	MCC
+Model Name | Accuracy	| AUC	| Precision	| Recall	| F1 Score |	MCC 
 Logistic Regression	0.891408	0.872583	0.594527	0.225898	0.327397	0.320453
 Decision Tree	0.876921	0.704412	0.474275	0.479206	0.476728	0.406996
 KNN	0.892292	0.808924	0.571672	0.316635	0.47543	0.37237
